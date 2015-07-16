@@ -1,16 +1,6 @@
+#include <LiquidCrystal.h>
 
-const int Note_C  = 239;
-const int Note_CS = 225;
-const int Note_D  = 213;
-const int Note_DS = 201;
-const int Note_E  = 190;
-const int Note_F  = 179;
-const int Note_FS = 169;
-const int Note_G  = 159;
-const int Note_GS = 150;
-const int Note_A  = 142;
-const int Note_AS = 134;
-const int Note_B  = 127;
+LiquidCrystal lcd(4, 5, 6, 7, 8, 9);
 
 typedef struct {
   byte sec;
@@ -22,82 +12,45 @@ typedef struct {
 time sleep;
 time awake;
 time feed;
+ 
 time current = {0, 0, 0, 0};
-time carry = {0, 0, 0, 0};
-time real = {0, 0, 0, 0};
 
-const int button = 2;
-const int leds = 0;
-const int autoModeLed = 3;
-const int hungryLed = 4;
-const int buzzer = 1;
+int leds = 3;
+int buzzer = 11;
+int button = 2;
+
 boolean autoMode;  //If automation is turned on
 boolean hungry;    //If fish is hungry
 boolean lightOn;   //If light turned on
 byte brightness;   //Brightness of lights (0-255)
-byte lastSec = 0;
+unsigned long lastMillis = 0;
 
 
 void setup() {
-  //Serial.begin(9600);
+  Serial.begin(9600);
+  
+  lcd.begin(16, 2);
+  pinMode(button, INPUT);
+  pinMode(buzzer, OUTPUT);
+  pinMode(leds, OUTPUT);
+
   autoMode = false;
   lightOn = true;
-  pinMode(buzzer, OUTPUT);
-  pinMode(button, INPUT); 
-  pinMode(autoModeLed, OUTPUT);
-  pinMode(hungryLed, OUTPUT);
-  analogWrite(leds, 255); 
-  TinyTone(Note_C, 4, 200);
-  TinyTone(Note_C, 5, 300);
-  delay(3000);
+  brightness = 255;
+  analogWrite(leds, brightness); 
+
 }
 
+
 void loop() {
-  if(millis() < 2000){
-    time current = {0, 0, 0, 0};
-    time carry = {real.sec, real.minute, real.hour, real.day};
+  unsigned long millisDiff = millis() - lastMillis;
+  millisDiff = abs(millisDiff);
+  
+  if(millisDiff >= 1000){
+    lastMillis += 1000;
+    updateTime();
+    checkStatus();
   }
-
-  current.sec = millis()/1000 - 60*(current.day*24*60 + (current.hour*60 + current.minute));
-
-  if(current.sec>59){
-    current.minute++;
-    current.sec = 0;
-  }
-  if(current.minute>59){
-    current.hour++;
-    current.minute = 0;
-  }
-  if(current.hour>23){
-    current.day++;
-    current.hour = 0;
-  }
-
-  real.sec = current.sec + carry.sec;
-  if (real.sec > 59){
-    real.sec-=60; 
-    real.minute++; 
-  }
-
-  real.minute = current.minute + carry.minute;
-  if (real.minute > 59){
-    real.minute -=60;
-    real.hour++;
-  }
-
-  real.hour = current.hour + carry.hour;
-  if (real.hour > 23){
-    real.hour -=24;
-    real.day++;
-  }
-
-  real.day = current.day + carry.day;
-
-  if(lastSec != real.sec){
-    lastSec = real.sec;
-    if(autoMode) checkStatus();
-  }
-
 
   if(digitalRead(button)){
     delay(100);
@@ -105,7 +58,7 @@ void loop() {
 
     while (digitalRead(button)){
       unsigned long now = millis();
-      if(abs(now - start) > 3000){
+      if((now - start) > 3000){
         set();
         return;
       }
@@ -113,9 +66,9 @@ void loop() {
 
     if(hungry) {
       hungry = false;
-      TinyTone(Note_B, 4, 250);
-      delay(50);
-      TinyTone(Note_B, 4, 250);
+      analogWrite(buzzer, 150);
+      delay(500);
+      analogWrite(buzzer, 0);
     }
     else if(lightOn){
       lightOn = false;
@@ -125,10 +78,10 @@ void loop() {
       lightOn = true;
       brightness = 255;
     }
-    analogWrite(leds, brightness);
+      analogWrite(leds, brightness);
+    }
   }
 
-}
 
 
 //******************************************************************
@@ -139,36 +92,40 @@ void set(){
     lightOn = false;
     brightness = 0;
     
-    sleep.sec = real.sec;
-    sleep.minute = real.minute;
-    sleep.hour = real.hour;
+    sleep.sec = current.sec;
+    sleep.minute = current.minute;
+    sleep.hour = current.hour;
     
-    awake.sec = real.sec;
-    awake.minute = real.minute;
-    awake.hour = (real.hour + 7) % 24;
+    awake.sec = current.sec;
+    awake.minute = current.minute;
+    awake.hour = (current.hour + 7) % 24;
     
-    feed.sec = real.sec;
-    feed.minute = real.minute;
-    feed.hour = (real.hour + 20) % 24;
+    feed.sec = current.sec;
+    feed.minute = current.minute;
+    feed.hour = (current.hour + 20) % 24;
   }
   else{
     lightOn = true;
     brightness = 255; 
     
-    sleep.sec = real.sec;
-    sleep.minute = real.minute;
-    sleep.hour = (real.hour + 17) % 24;
+    sleep.sec = current.sec;
+    sleep.minute = current.minute;
+    sleep.hour = (current.hour + 17) % 24;
     
-    awake.sec = real.sec;
-    awake.minute = real.minute;
-    awake.hour = real.hour;
+    awake.sec = current.sec;
+    awake.minute = current.minute;
+    awake.hour = current.hour;
     
-    feed.sec = real.sec;
-    feed.minute = real.minute;
-    feed.hour = (real.hour + 13) % 24;
+    feed.sec = current.sec;
+    feed.minute = current.minute;
+    feed.hour = (current.hour + 13) % 24;
   }
   
-  /*
+  analogWrite(leds, brightness);
+  analogWrite(buzzer, 150);
+  delay(1500);
+  analogWrite(buzzer, 0);
+  
   Serial.print("Awake: ");
   Serial.print(awake.hour);
   Serial.print(":");
@@ -188,69 +145,78 @@ void set(){
   Serial.print(":");
   Serial.println(sleep.sec);
   Serial.println();
-  analogWrite(leds, brightness);
-  */
-  analogWrite(leds, brightness);
-  TinyTone(Note_E, 4, 800);   
 }
 
 
 //******************************************************************
+void updateTime(){
+  current.sec += 1;
+  
+  if(current.sec>59){
+    current.minute++;
+    current.sec = 0;
+  }
+  if(current.minute>59){
+    current.hour++;
+    current.minute = 0;
+  }
+  if(current.hour>23){
+    current.day++;
+    current.hour = 0;
+  }  
+  
+  lcd.clear();
+  lcd.print(current.day);
+  lcd.print(" ");
+  if (current.hour < 10) lcd.print("0");
+  lcd.print(current.hour);
+  lcd.print(":");
+  if (current.minute < 10) lcd.print("0");
+  lcd.print(current.minute);
+  lcd.print(":");
+  if (current.sec < 10) lcd.print("0");
+  lcd.print(current.sec);
+  
+  lcd.setCursor(0, 1);
+  lcd.print("B:");
+  lcd.print(brightness);
+  if(hungry) lcd.print(" H");
+  if(autoMode) lcd.print(" A");
+  
+}
+
+//******************************************************************
 void checkStatus(){
-  if(real.sec % 15 == 0){
+  if(current.sec % 15 == 0){
     if(lightOn && brightness < 255){
       brightness++;
     }
     else if (!lightOn && brightness > 0){
-      brightness--;
+    brightness--;
     }
     analogWrite(leds, brightness);
   }
+  
 
-  if(real.sec == 0){
-    if(real.minute == awake.minute && real.hour == awake.hour){
+
+  if(current.sec == 0 && autoMode){
+    if(current.minute == awake.minute && current.hour == awake.hour){
       lightOn = true;  
     }
-    else if(real.minute == sleep.minute && real.hour == sleep.hour){
+    else if(current.minute == sleep.minute && current.hour == sleep.hour){
       lightOn = false;
     }
-    else if(real.minute == feed.minute && real.hour == feed.hour){
+    else if(current.minute == feed.minute && current.hour == feed.hour){
       hungry = true;
     }
   }
   
-  (autoMode)?(digitalWrite(autoModeLed,HIGH)):(digitalWrite(autoModeLed,LOW));
-  (hungry)?(digitalWrite(hungryLed,HIGH)):(digitalWrite(hungryLed,LOW));
-  
-  if(hungry && (real.sec == 0) && ((real.minute % 15) == 0)){
-    TinyTone(Note_E, 4, 300);
-    delay(100);
-    TinyTone(Note_E, 4, 300);
+  if(hungry && (current.sec == 0) && ((current.minute % 15) == 0)){
+    analogWrite(buzzer, 150);
+    delay(2000);
+    analogWrite(buzzer, 0);
   }
-
-  /*
-  Serial.print("Current: ");
-  Serial.print(real.day);
-  Serial.print(" ");
-  Serial.print(real.hour);
-  Serial.print(":");
-  Serial.print(real.minute);
-  Serial.print(":");
-  Serial.print(real.sec);
-  Serial.print(" Brightness:");
-  Serial.print(brightness);
-  Serial.println(" ");
-  Serial.println(); */
 }
 
 
 
-//******************************************************************
-void TinyTone(unsigned char divisor, unsigned char octave, unsigned long duration)
-{
-  TCCR1 = 0x90 | (8-octave); // for 1MHz clock
-  // TCCR1 = 0x90 | (11-octave); // for 8MHz clock
-  OCR1C = divisor-1;         // set the OCR
-  delay(duration);
-  TCCR1 = 0x90;              // stop the counter
-}
