@@ -1,6 +1,15 @@
-#include <LiquidCrystal.h>
-
-LiquidCrystal lcd(4, 5, 6, 7, 8, 9);
+const int Note_C  = 239;
+const int Note_CS = 225;
+const int Note_D  = 213;
+const int Note_DS = 201;
+const int Note_E  = 190;
+const int Note_F  = 179;
+const int Note_FS = 169;
+const int Note_G  = 159;
+const int Note_GS = 150;
+const int Note_A  = 142;
+const int Note_AS = 134;
+const int Note_B  = 127;
 
 typedef struct {
   byte sec;
@@ -15,8 +24,8 @@ time feed;
  
 time current = {0, 0, 0, 0};
 
-int leds = 3;
-int buzzer = 11;
+int leds = 0;
+int buzzer = 1;
 int button = 2;
 
 boolean autoMode;  //If automation is turned on
@@ -27,9 +36,6 @@ unsigned long lastMillis = 0;
 
 
 void setup() {
-  Serial.begin(9600);
-  
-  lcd.begin(16, 2);
   pinMode(button, INPUT);
   pinMode(buzzer, OUTPUT);
   pinMode(leds, OUTPUT);
@@ -38,6 +44,8 @@ void setup() {
   lightOn = true;
   brightness = 255;
   analogWrite(leds, brightness); 
+  TinyTone(Note_C, 4, 200);
+  TinyTone(Note_C, 5, 300);
 
 }
 
@@ -53,7 +61,7 @@ void loop() {
   }
 
   if(digitalRead(button)){
-    delay(100);
+    delay(300);
     unsigned long start = millis();
 
     while (digitalRead(button)){
@@ -66,9 +74,7 @@ void loop() {
 
     if(hungry) {
       hungry = false;
-      analogWrite(buzzer, 150);
-      delay(500);
-      analogWrite(buzzer, 0);
+      TinyTone(Note_B, 4, 250);
     }
     else if(lightOn){
       lightOn = false;
@@ -99,10 +105,13 @@ void set(){
     awake.sec = current.sec;
     awake.minute = current.minute;
     awake.hour = (current.hour + 7) % 24;
+   
     
     feed.sec = current.sec;
     feed.minute = current.minute;
     feed.hour = (current.hour + 20) % 24;
+
+  
   }
   else{
     lightOn = true;
@@ -122,29 +131,7 @@ void set(){
   }
   
   analogWrite(leds, brightness);
-  analogWrite(buzzer, 150);
-  delay(1500);
-  analogWrite(buzzer, 0);
-  
-  Serial.print("Awake: ");
-  Serial.print(awake.hour);
-  Serial.print(":");
-  Serial.print(awake.minute);
-  Serial.print(":");
-  Serial.println(awake.sec);
-  Serial.print("Feed: ");
-  Serial.print(feed.hour);
-  Serial.print(":");
-  Serial.print(feed.minute);
-  Serial.print(":");
-  Serial.println(feed.sec);
-  Serial.print("Sleep: ");
-  Serial.print(sleep.hour);
-  Serial.print(":");
-  Serial.print(sleep.minute);
-  Serial.print(":");
-  Serial.println(sleep.sec);
-  Serial.println();
+  TinyTone(Note_E, 4, 800);   
 }
 
 
@@ -163,26 +150,7 @@ void updateTime(){
   if(current.hour>23){
     current.day++;
     current.hour = 0;
-  }  
-  
-  lcd.clear();
-  lcd.print(current.day);
-  lcd.print(" ");
-  if (current.hour < 10) lcd.print("0");
-  lcd.print(current.hour);
-  lcd.print(":");
-  if (current.minute < 10) lcd.print("0");
-  lcd.print(current.minute);
-  lcd.print(":");
-  if (current.sec < 10) lcd.print("0");
-  lcd.print(current.sec);
-  
-  lcd.setCursor(0, 1);
-  lcd.print("B:");
-  lcd.print(brightness);
-  if(hungry) lcd.print(" H");
-  if(autoMode) lcd.print(" A");
-  
+  }   
 }
 
 //******************************************************************
@@ -212,11 +180,22 @@ void checkStatus(){
   }
   
   if(hungry && (current.sec == 0) && ((current.minute % 15) == 0)){
-    analogWrite(buzzer, 150);
-    delay(2000);
-    analogWrite(buzzer, 0);
+  TinyTone(Note_E, 4, 800); 
+  delay(250);
+  TinyTone(Note_E, 4, 800); 
+  delay(250);
+  TinyTone(Note_E, 4, 800); 
   }
 }
 
 
-
+//******************************************************************
+void TinyTone(unsigned char divisor, unsigned char octave, unsigned long duration)
+{
+  //TCCR1 = 0x90 | (8-octave); // for 1MHz clock
+  TCCR1 = 0x90 | (12-octave); // for 1MHz clock
+  // TCCR1 = 0x90 | (11-octave); // for 8MHz clock
+  OCR1C = divisor-1;         // set the OCR
+  delay(duration);
+  TCCR1 = 0x90;              // stop the counter
+}
