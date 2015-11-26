@@ -44,9 +44,9 @@ void setup() {
   lightOn = true;
   brightness = 255;
   analogWrite(leds, brightness); 
+  digitalWrite(buzzer, LOW);
   TinyTone(Note_C, 4, 200);
   TinyTone(Note_C, 5, 300);
-
 }
 
 
@@ -96,7 +96,7 @@ void set(){
 
   if(lightOn){
     lightOn = false;
-    brightness = 0;
+    brightness = 255;
     
     sleep.sec = current.sec;
     sleep.minute = current.minute;
@@ -104,22 +104,22 @@ void set(){
     
     awake.sec = current.sec;
     awake.minute = current.minute;
-    awake.hour = (current.hour + 7) % 24;
+    awake.hour = (current.hour + 10) % 24;
    
     
     feed.sec = current.sec;
     feed.minute = current.minute;
-    feed.hour = (current.hour + 20) % 24;
+    feed.hour = (current.hour + 22) % 24;
 
   
   }
   else{
     lightOn = true;
-    brightness = 255; 
+    brightness = 0; 
     
     sleep.sec = current.sec;
     sleep.minute = current.minute;
-    sleep.hour = (current.hour + 17) % 24;
+    sleep.hour = (current.hour + 14) % 24;
     
     awake.sec = current.sec;
     awake.minute = current.minute;
@@ -127,11 +127,14 @@ void set(){
     
     feed.sec = current.sec;
     feed.minute = current.minute;
-    feed.hour = (current.hour + 13) % 24;
+    feed.hour = (current.hour + 12) % 24;
   }
   
   analogWrite(leds, brightness);
-  TinyTone(Note_E, 4, 800);   
+  //analogWrite(buzzer, 50);
+  //delay(800);
+  //analogWrite(buzzer, 0);
+  TinyTone(Note_E, 4, 800);  
 }
 
 
@@ -155,7 +158,7 @@ void updateTime(){
 
 //******************************************************************
 void checkStatus(){
-  if(current.sec % 15 == 0){
+  if(current.sec % 30 == 0){
     if(lightOn && brightness < 255){
       brightness++;
     }
@@ -184,7 +187,7 @@ void checkStatus(){
   delay(250);
   TinyTone(Note_E, 4, 800); 
   delay(250);
-  TinyTone(Note_E, 4, 800); 
+  TinyTone(Note_E, 4, 800);
   }
 }
 
@@ -197,5 +200,5 @@ void TinyTone(unsigned char divisor, unsigned char octave, unsigned long duratio
   // TCCR1 = 0x90 | (11-octave); // for 8MHz clock
   OCR1C = divisor-1;         // set the OCR
   delay(duration);
-  TCCR1 = 0x90;              // stop the counter
+  TCCR1 = 0x80;              // stop the counter
 }
